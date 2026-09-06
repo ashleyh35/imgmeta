@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imgmeta"
+version = "0.1.0"
+description = "Validating parser and pretty printer for image metadata"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+
+[project.scripts]
+imgmeta = "imgmeta.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

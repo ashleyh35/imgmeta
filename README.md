@@ -85,3 +85,13 @@ python -m imgmeta some/file.jpg
 
 or install it locally with `pip install -e .` to get the `imgmeta`
 console script.
+
+## Tests
+
+```
+python -m unittest discover -s tests
+```
+
+The tests build their JPEG/Exif fixtures byte by byte in
+`tests/fixtures.py` rather than shipping binary sample files, so it's
+obvious from the test itself which byte is under test.

@@ -1,4 +1,4 @@
-"""Handcrafted byte-level fixtures for JPEG/Exif parsing tests.
+"""Handcrafted byte-level fixtures for JPEG/PNG/Exif parsing tests.
 
 Everything here is built field by field with struct.pack rather than
 pasted in as a binary blob, so a test failure points at which byte
@@ -7,6 +7,7 @@ meant what.
 from __future__ import annotations
 
 import struct
+import zlib
 from typing import List, Optional, Tuple
 
 Entry = Tuple[int, str, object]  # tag_id, kind ("ascii"/"short"/"long"/"rational"), value
@@ -114,4 +115,40 @@ def minimal_jpeg(
     sos_payload = bytes([num_components]) + b"\x01\x00" * num_components + bytes([0, 63, 0])
     out += jpeg_segment(0xDA, sos_payload)
     out += b"\x00\x00\xFF\xD9"  # stand-in scan bytes + EOI, never walked by the parser
+    return bytes(out)
+
+
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def png_chunk(chunk_type: bytes, payload: bytes = b"") -> bytes:
+    return (
+        struct.pack(">I", len(payload))
+        + chunk_type
+        + payload
+        + struct.pack(">I", zlib.crc32(chunk_type + payload))
+    )
+
+
+def minimal_png(
+    width: int = 20,
+    height: int = 10,
+    bit_depth: int = 8,
+    color_type: int = 2,
+    text_chunks: Optional[List[Tuple[bytes, bytes]]] = None,
+    exif_block: Optional[bytes] = None,
+) -> bytes:
+    """A tiny but structurally valid PNG: signature, IHDR, any requested
+    text/Exif chunks, a one-byte stand-in IDAT (never decompressed by the
+    parser), and IEND.
+    """
+    ihdr_payload = struct.pack(">IIBBBBB", width, height, bit_depth, color_type, 0, 0, 0)
+    out = bytearray(_PNG_SIGNATURE)
+    out += png_chunk(b"IHDR", ihdr_payload)
+    for chunk_type, payload in text_chunks or []:
+        out += png_chunk(chunk_type, payload)
+    if exif_block is not None:
+        out += png_chunk(b"eXIf", exif_block)
+    out += png_chunk(b"IDAT", b"\x00")
+    out += png_chunk(b"IEND")
     return bytes(out)
